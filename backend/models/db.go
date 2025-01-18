@@ -1,13 +1,17 @@
 package models
 
-import "github.com/jmoiron/sqlx"
+import (
+	"github.com/go-chi/jwtauth/v5"
+	"github.com/jmoiron/sqlx"
+)
 
 type PostgresStore struct {
 	DB *sqlx.DB
 }
 
 type AppResource struct {
-	Store *PostgresStore
+	Store     *PostgresStore
+	TokenAuth *jwtauth.JWTAuth
 }
 
 func (s *PostgresStore) Connect(DB_URL string) error {
@@ -23,8 +27,9 @@ func (s *PostgresStore) Close() error {
 	return s.DB.Close()
 }
 
-func NewAppResource(store *PostgresStore) *AppResource {
+func NewAppResource(store *PostgresStore, token *jwtauth.JWTAuth) *AppResource {
 	return &AppResource{
-		Store: store,
+		Store:     store,
+		TokenAuth: token,
 	}
 }

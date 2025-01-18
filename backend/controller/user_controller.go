@@ -38,7 +38,12 @@ func (UserController) CreateUser(db *models.PostgresStore, user models.Users) er
 }
 
 func (UserController) UpdateUser(db *models.PostgresStore, user models.Users) error {
-	_, err := db.DB.Exec("UPDATE users SET Username=?, Password=?, Fullname=?, Email=?, PhoneNumber=?, Gender=?, Role=? WHERE id=?", user.Username, user.Password, user.Fullname, user.Email, user.PhoneNumber, user.Gender, user.Role, user.ID)
+	_, err := db.DB.Exec("UPDATE users SET Fullname=?, PhoneNumber=?, Gender=?, WHERE id=?", user.Fullname, user.PhoneNumber, user.Gender, user.ID)
+	return err
+}
+
+func (UserController) ResetPassword(db *models.PostgresStore, newPassword string, id int) error {
+	_, err := db.DB.Exec("UPDATE users SET Password=? WHERE id=?", newPassword, id)
 	return err
 }
 
@@ -64,4 +69,15 @@ func (UC UserController) LoginUserByUsername(db *models.PostgresStore, username 
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password.String), []byte(password))
 	return user, err
+}
+
+func (UC UserController) RoleCheck(db *models.PostgresStore, id int) bool {
+	user, err := UC.GetUser(db, id)
+	if err != nil {
+		return false
+	}
+	if user.Role.String == "admin" {
+		return true
+	}
+	return false
 }

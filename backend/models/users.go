@@ -5,13 +5,13 @@ import (
 )
 
 type Users struct {
-	ID          uint             `db:"ID"`
-	Username    pgtype.Varchar   `db:"Username"`
-	Password    pgtype.Varchar   `db:"Password"`
-	Fullname    pgtype.Varchar   `db:"Fullname"`
-	Email       pgtype.Varchar   `db:"Email"`
-	PhoneNumber pgtype.Varchar   `db:"PhoneNumber"`
-	Gender      pgtype.Varchar   `db:"Gender"`
-	Role        pgtype.Varchar   `db:"Role"`
-	CreateDate  pgtype.Timestamp `db:"CreateDate"`
+	ID          uint             `db:"ID" json:"ID"`
+	Username    pgtype.Varchar   `db:"Username" json:"Username"`
+	Password    pgtype.Varchar   `db:"Password" json:"Password"`
+	Fullname    pgtype.Varchar   `db:"Fullname" json:"Fullname"`
+	Email       pgtype.Varchar   `db:"Email" json:"Email"`
+	PhoneNumber pgtype.Varchar   `db:"PhoneNumber" json:"PhoneNumber"`
+	Gender      pgtype.Varchar   `db:"Gender" json:"Gender"`
+	Role        pgtype.Varchar   `db:"Role" json:"Role"`
+	CreateDate  pgtype.Timestamp `db:"CreateDate" json:"CreateDate"`
 }

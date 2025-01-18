@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/jwtauth/v5"
 	"github.com/joho/godotenv"
 	"github.com/justinas/nosurf"
 	"github.com/unrolled/secure"
@@ -27,6 +28,9 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
+	// JWT
+	tokenAuth := jwtauth.New("HS256", []byte(os.Getenv("JWT_SECRET")), nil)
+
 	// CHI ROUTER
 	r := chi.NewRouter()
 
@@ -59,7 +63,7 @@ func main() {
 	r.Use(secureMiddleware.Handler)
 	r.Use(nosurf.NewPure)
 
-	rs := models.NewAppResource(&db)
+	rs := models.NewAppResource(&db, tokenAuth)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World!"))

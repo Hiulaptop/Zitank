@@ -92,7 +92,6 @@ CREATE TABLE Orders (
     EditDate timestamp NOT NULL DEFAULT NOW(),
     UserID bigint REFERENCES Users(ID) ON DELETE CASCADE ON UPDATE CASCADE,
     RoomID bigint REFERENCES Rooms(ID) ON DELETE CASCADE ON UPDATE CASCADE,
-    EXCLUDE USING GiST (ID with =, FromTo with &&)
 );
 CREATE TRIGGER update_timestamp BEFORE UPDATE ON Orders
 FOR EACH ROW EXECUTE PROCEDURE moddatetime(EditDate);
