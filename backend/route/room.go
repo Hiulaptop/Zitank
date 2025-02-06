@@ -12,21 +12,20 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
-func postRouter(rs *models.AppResource) http.Handler {
+func roomRouter(rs *models.AppResource) http.Handler {
 	r := chi.NewRouter()
 	var userController controller.UserController
-	var postController controller.PostController
+	var roomController controller.RoomController
 
-	//get all post
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		posts, err := postController.GetPosts(rs.Store)
+		rooms, err := roomController.GetRooms(rs.Store)
 		if err != nil {
-			http.Error(w, "Error fetching post", http.StatusInternalServerError)
+			http.Error(w, "Error fetching room", http.StatusInternalServerError)
 			return
 		}
-		response, err := json.Marshal(posts)
+		response, err := json.Marshal(rooms)
 		if err != nil {
-			http.Error(w, "Error marshalling response", http.StatusInternalServerError)
+			http.Error(w, "Eror marshalling response", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -37,29 +36,30 @@ func postRouter(rs *models.AppResource) http.Handler {
 		r.Use(jwtauth.Verifier(rs.TokenAuth))
 		r.Use(jwtauth.Authenticator(rs.TokenAuth))
 
-		r.Route("/upload", func(r chi.Router) {
-			r.Use(func(h http.Handler) http.Handler {
+		r.Route("/upload", func(r chi.Router){
+			r.Use(func(h http.Handler) http.Handler{
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// check role
+					//check role
 					_, claims, _ := jwtauth.FromContext(r.Context())
 					userID := claims["user_id"].(int)
 					ok := userController.RoleCheck(rs.Store, userID)
 					if !ok {
-						http.Error(w, "Forbidden", http.StatusForbidden)
+						http.Error(w, "Forbiden", http.StatusForbidden)
 						return
 					}
+
 					h.ServeHTTP(w, r)
 				})
 			})
 
 			r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-				var post models.Posts
-				err := json.NewDecoder(r.Body).Decode(&post)
+				var room models.Rooms
+				err := json.NewDecoder(r.Body).Decode(&room)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = postController.CreatePost(rs.Store, post)
+				err = roomController.CreateRoom(rs.Store, room)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
@@ -67,33 +67,33 @@ func postRouter(rs *models.AppResource) http.Handler {
 			})
 		})
 
-		r.Route("/{postID}", func(r chi.Router) {
+		r.Route("/{roomID}", func(r chi.Router){
 			r.Use(func(h http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					postID, err := strconv.Atoi(chi.URLParam(r, "postID"))
+					roomID, err := strconv.Atoi(chi.URLParam(r, "roomID"))
 					if err != nil {
-						http.Error(w, "Invalid post ID", http.StatusBadRequest)
+						http.Error(w, "Invalid room ID", http.StatusBadRequest)
 						return
 					}
 					type contextKey string
-					ctx := context.WithValue(r.Context(), contextKey("postID"), postID)
+					ctx := context.WithValue(r.Context(), contextKey("roomID"), roomID)
 					h.ServeHTTP(w, r.WithContext(ctx))
 				})
 			})
 
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.Context()
-				postID, ok := ctx.Value("postID").(int)
+				roomID, ok := ctx.Value("roomID").(int)
 				if !ok {
-					http.Error(w, "Invalid post ID in context", http.StatusInternalServerError)
+					http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
 					return
 				}
-				post, err := postController.GetPost(rs.Store, postID)
+				room, err := roomController.GetRoom(rs.Store, roomID)
 				if err != nil {
-					http.Error(w, "Error fetching post", http.StatusInternalServerError)
+					http.Error(w, "Error fetching room", http.StatusInternalServerError)
 					return
 				}
-				response, err := json.Marshal(post)
+				response, err := json.Marshal(room)
 				if err != nil {
 					http.Error(w, "Error marshalling response", http.StatusInternalServerError)
 					return
@@ -112,14 +112,14 @@ func postRouter(rs *models.AppResource) http.Handler {
 					return
 				}
 
-				var postValue models.Posts
-				err := json.NewDecoder(r.Body).Decode(&postValue)
+				var roomValue models.Rooms
+				err := json.NewDecoder(r.Body).Decode(&roomValue)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				postController.UpdatePost(rs.Store, postValue)
-				w.Write([]byte("Successful update post"))
+				roomController.UpdateRoom(rs.Store, roomValue)
+				w.Write([]byte("Successful update room"))
 			}))
 
 			r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -133,13 +133,13 @@ func postRouter(rs *models.AppResource) http.Handler {
 				}
 
 				ctx := r.Context()
-				postID, ok := ctx.Value("postID").(int)
+				roomID, ok := ctx.Value("roomID").(int)
 				if !ok {
-					http.Error(w, "Invalid post ID in context", http.StatusInternalServerError)
+					http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
 					return
 				}
-				postController.DeletePost(rs.Store, postID)
-				w.Write([]byte("Successful delete post"))
+				roomController.DeleteRoom(rs.Store, roomID)
+				w.Write([]byte("Successful delete room"))
 			}))
 		})
 	})

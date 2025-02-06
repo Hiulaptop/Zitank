@@ -12,5 +12,6 @@ func ApiRouter(rs *models.AppResource) http.Handler {
 	r.Mount("/user", userRouter(rs))
 	r.Mount("/music", musicRouter(rs))
 	r.Mount("/post", postRouter(rs))
+	r.Mount("/room", roomRouter(rs))
 	return r
 }
