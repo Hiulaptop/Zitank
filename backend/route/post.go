@@ -1,7 +1,6 @@
 package route
 
 import (
-	"Zitank/controller"
 	"Zitank/models"
 	"context"
 	"encoding/json"
@@ -12,14 +11,12 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
-func postRouter(rs *models.AppResource) http.Handler {
+func (BH BaseHandler) postRouter() http.Handler {
 	r := chi.NewRouter()
-	var userController controller.UserController
-	var postController controller.PostController
 
 	//get all post
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		posts, err := postController.GetPosts(rs.Store)
+		posts, err := BH.postRepository.GetPosts()
 		if err != nil {
 			http.Error(w, "Error fetching post", http.StatusInternalServerError)
 			return
@@ -34,17 +31,17 @@ func postRouter(rs *models.AppResource) http.Handler {
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(rs.TokenAuth))
-		r.Use(jwtauth.Authenticator(rs.TokenAuth))
+		r.Use(jwtauth.Verifier(BH.TokenAuth))
+		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
 		r.Route("/upload", func(r chi.Router) {
 			r.Use(func(h http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					// check role
 					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["user_id"].(int)
-					ok := userController.RoleCheck(rs.Store, userID)
-					if !ok {
+					userID := claims["userid"].(int)
+					role := BH.userRepositor.RoleCheck(userID)
+					if role != "admin" {
 						http.Error(w, "Forbidden", http.StatusForbidden)
 						return
 					}
@@ -59,7 +56,7 @@ func postRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = postController.CreatePost(rs.Store, post)
+				err = BH.postRepository.CreatePost(&post)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
@@ -88,7 +85,7 @@ func postRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, "Invalid post ID in context", http.StatusInternalServerError)
 					return
 				}
-				post, err := postController.GetPost(rs.Store, postID)
+				post, err := BH.postRepository.GetPost(postID)
 				if err != nil {
 					http.Error(w, "Error fetching post", http.StatusInternalServerError)
 					return
@@ -105,9 +102,9 @@ func postRouter(rs *models.AppResource) http.Handler {
 			r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				//check role
 				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["user_id"].(int)
-				ok := userController.RoleCheck(rs.Store, userID)
-				if !ok {
+				userID := claims["userid"].(int)
+				role := BH.userRepositor.RoleCheck(userID)
+				if role != "admin" {
 					http.Error(w, "Forbidden", http.StatusForbidden)
 					return
 				}
@@ -118,16 +115,16 @@ func postRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				postController.UpdatePost(rs.Store, postValue)
+				BH.postRepository.UpdatePost(&postValue)
 				w.Write([]byte("Successful update post"))
 			}))
 
 			r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				//check role
 				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["user_id"].(int)
-				ok := userController.RoleCheck(rs.Store, userID)
-				if !ok {
+				userID := claims["userid"].(int)
+				role := BH.userRepositor.RoleCheck(userID)
+				if role != "admin" {
 					http.Error(w, "Forbidden", http.StatusForbidden)
 					return
 				}
@@ -138,7 +135,7 @@ func postRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, "Invalid post ID in context", http.StatusInternalServerError)
 					return
 				}
-				postController.DeletePost(rs.Store, postID)
+				BH.postRepository.DeletePost(postID)
 				w.Write([]byte("Successful delete post"))
 			}))
 		})

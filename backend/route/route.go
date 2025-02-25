@@ -1,17 +1,20 @@
 package route
 
 import (
-	"Zitank/models"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func ApiRouter(rs *models.AppResource) http.Handler {
+func (BH BaseHandler) ApiRouter() http.Handler {
 	r := chi.NewRouter()
-	r.Mount("/user", userRouter(rs))
-	r.Mount("/music", musicRouter(rs))
-	r.Mount("/post", postRouter(rs))
-	r.Mount("/room", roomRouter(rs))
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("User"))
+	})
+	r.Mount("/user", BH.userRouter())
+	r.Mount("/music", BH.musicRouter())
+	r.Mount("/post", BH.postRouter())
+	r.Mount("/room", BH.roomRouter())
+	r.Mount("/order", BH.orderRouter())
 	return r
 }

@@ -1,11 +1,11 @@
 package route
 
 import (
-	"Zitank/controller"
 	"Zitank/models"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
@@ -21,17 +21,47 @@ type UserResetPassword struct {
 	NewPassword string `json:"password"`
 }
 
-func userRouter(rs *models.AppResource) http.Handler {
+type UserRegister struct {
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+	Fullname    string `json:"fullname"`
+	Email       string `json:"email"`
+	PhoneNumber string `json:"phonenumber"`
+}
+
+func FromUserRegister(ur UserRegister) models.Users {
+	return models.Users{
+		Username:    strings.ToLower(ur.Username),
+		Password:    strings.ToLower(ur.Password),
+		Email:       strings.ToLower(ur.Email),
+		Fullname:    strings.ToLower(ur.Fullname),
+		PhoneNumber: strings.ToLower(ur.PhoneNumber),
+		Gender:      "None",
+		Role:        "user",
+	}
+}
+
+func (BH BaseHandler) userRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("User"))
+		users, err := BH.userRepositor.GetUsers()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		res, err := json.Marshal(users)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Write(res)
 	})
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(rs.TokenAuth))
-		r.Use(jwtauth.Authenticator(rs.TokenAuth))
+		r.Use(jwtauth.Verifier(BH.TokenAuth))
+		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
 			_, claims, _ := jwtauth.FromContext(r.Context())
-			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["user_id"])))
+			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["userid"])))
 		})
 	})
 	r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
@@ -41,13 +71,12 @@ func userRouter(rs *models.AppResource) http.Handler {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		userController := controller.UserController{}
-		user, err := userController.LoginUserByUsername(rs.Store, userrq.Username, userrq.Password)
+		user, err := BH.userRepositor.LoginUserByUsername(strings.ToLower(userrq.Username), strings.ToLower(userrq.Password))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		_, tokenString, err := rs.TokenAuth.Encode(map[string]interface{}{"user_id": user.ID})
+		_, tokenString, err := BH.TokenAuth.Encode(map[string]interface{}{"userid": user.ID})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -56,19 +85,24 @@ func userRouter(rs *models.AppResource) http.Handler {
 	})
 
 	r.Post("/register", func(w http.ResponseWriter, r *http.Request) {
-		var userinfo models.Users
+		var userinfo UserRegister
 		err := json.NewDecoder(r.Body).Decode(&userinfo)
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		userController := controller.UserController{}
-		err = userController.CreateUser(rs.Store, userinfo)
+
+		userObject := FromUserRegister(userinfo)
+
+		id, err := BH.userRepositor.RegisterUser(&userObject)
 		if err != nil {
+			fmt.Printf("CreateUser error: %v\n", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		_, tokenString, err := rs.TokenAuth.Encode(map[string]interface{}{"user_id": userinfo.ID})
+
+		_, tokenString, err := BH.TokenAuth.Encode(map[string]interface{}{"userid": id})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -87,13 +121,12 @@ func userRouter(rs *models.AppResource) http.Handler {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		userController := controller.UserController{}
-		err = userController.ResetPassword(rs.Store, usernpw.NewPassword, usernpw.UserID)
+		err = BH.userRepositor.ResetPassword(usernpw.NewPassword, usernpw.UserID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		_, tokenString, err := rs.TokenAuth.Encode(map[string]interface{}{"user_id": usernpw.UserID})
+		_, tokenString, err := BH.TokenAuth.Encode(map[string]interface{}{"userid": usernpw.UserID})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

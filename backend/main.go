@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/jwtauth/v5"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/joho/godotenv"
-	"github.com/justinas/nosurf"
 	"github.com/unrolled/secure"
 )
 
@@ -23,7 +23,7 @@ func main() {
 	}
 	// SQLX
 	var db models.PostgresStore
-	err = db.Connect(os.Getenv("DB_URL"))
+	err = db.Connect(os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		panic(err)
 	}
@@ -34,8 +34,11 @@ func main() {
 	// CHI ROUTER
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
+	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -61,12 +64,17 @@ func main() {
 		IsDevelopment:         true,
 	})
 	r.Use(secureMiddleware.Handler)
-	r.Use(nosurf.NewPure)
+	// r.Use(nosurf.NewPure)
 
-	rs := models.NewAppResource(&db, tokenAuth)
+	handler := route.NewBaseHandler(db.DB, tokenAuth)
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello, World!"))
 	})
-	r.Mount("/api", route.ApiRouter(rs))
+
+	r.Mount("/api", handler.ApiRouter())
+
+	// Start Http server
+	println("Start server at port 3333.")
+	http.ListenAndServe(":3333", r)
 }

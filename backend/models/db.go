@@ -15,7 +15,7 @@ type AppResource struct {
 }
 
 func (s *PostgresStore) Connect(DB_URL string) error {
-	db, err := sqlx.Open("postgres", DB_URL)
+	db, err := sqlx.Connect("pgx", DB_URL)
 	if err != nil {
 		return err
 	}

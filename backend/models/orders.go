@@ -1,19 +1,35 @@
 package models
 
 import (
-	"github.com/jackc/pgtype"
+	"github.com/jackc/pgx/pgtype"
 )
 
 type Orders struct {
-	ID           uint             `db:"ID" json:"ID"`
-	FromTo       pgtype.Tsrange   `db:"FromTo" json:"FromTo"`
-	State        pgtype.Varchar   `db:"State" json:"State"`
-	Note         pgtype.Text      `db:"Note" json:"Note"`
-	CheckInDate  pgtype.Timestamp `db:"CheckInDate" json:"CheckInDate"`
-	CheckOutDate pgtype.Timestamp `db:"CheckOutDate" json:"CheckOutDate"`
-	TotalPrice   float64          `db:"TotalPrice" json:"TotalPrice"`
-	CreateDate   pgtype.Timestamp `db:"CreateDate" json:"CreateDate"`
-	EditDate     pgtype.Timestamp `db:"EditDate" json:"EditDate"`
-	UserID       uint             `db:"UserID" json:"UserID"`
-	RoomID       uint             `db:"RoomID" json:"RoomID"`
+	ID           uint             `db:"id" json:"id"`
+	FromTo       pgtype.Tsrange   `db:"fromto" json:"fromto"`
+	State        string           `db:"state" json:"state"`
+	Note         string           `db:"note" json:"note"`
+	CheckInDate  pgtype.Timestamp `db:"checkindate" json:"checkindate"`
+	CheckOutDate pgtype.Timestamp `db:"checkoutdate" json:"checkoutdate"`
+	TotalPrice   float64          `db:"totalprice" json:"totalprice"`
+	CreateDate   pgtype.Timestamp `db:"createdate" json:"createdate"`
+	EditDate     pgtype.Timestamp `db:"editdate" json:"editdate"`
+	UserID       uint             `db:"userid" json:"userid"`
+	RoomID       uint             `db:"roomid" json:"roomid"`
+}
+
+type OrderRepository interface {
+	GetOrders() ([]*Orders, error)
+	GetOrder(int) (*Orders, error)
+	GetAllOrderFromUser(int) ([]*Orders, error)
+	GetAllOrderFromRoom(int) ([]*Orders, error)
+	GetOrdersInRange(int, pgtype.Tsrange) ([]*Orders, error)
+
+	CreateOrder(*Orders) error
+
+	UpdateOrder(*Orders) error
+
+	DeleteOrder(int) error
+
+	CheckOrder(*Orders) bool
 }

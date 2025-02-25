@@ -1,7 +1,6 @@
 package route
 
 import (
-	"Zitank/controller"
 	"Zitank/models"
 	"context"
 	"encoding/json"
@@ -12,25 +11,23 @@ import (
 	"github.com/go-chi/jwtauth/v5"
 )
 
-func musicRouter(rs *models.AppResource) http.Handler {
+func (BH BaseHandler) musicRouter() http.Handler {
 	r := chi.NewRouter()
-	var musicController controller.MusicController
-	var userController controller.UserController
 	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 
 	})
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(rs.TokenAuth))
-		r.Use(jwtauth.Authenticator(rs.TokenAuth))
+		r.Use(jwtauth.Verifier(BH.TokenAuth))
+		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
 		r.Route("/upload", func(r chi.Router) {
 			r.Use(func(h http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					// check role
 					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["user_id"].(int)
-					ok := userController.RoleCheck(rs.Store, userID)
-					if !ok {
+					userID := claims["userid"].(int)
+					role := BH.userRepositor.RoleCheck(userID)
+					if role != "admin" {
 						http.Error(w, "Forbidden", http.StatusForbidden)
 						return
 					}
@@ -44,7 +41,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = musicController.CreateMusic(rs.Store, music)
+				err = BH.musicRepository.CreateMusic(&music)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
@@ -52,7 +49,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 			})
 		})
 
-		r.Route("/{musicID}", func(r chi.Router) {
+		r.Route("/admin/{musicID}", func(r chi.Router) {
 			r.Use(func(h http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					musicID, err := strconv.Atoi(chi.URLParam(r, "musicID"))
@@ -73,7 +70,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = musicController.CreateMusicInfo(rs.Store, musicinfo)
+				err = BH.musicRepository.CreateMusicInfo(&musicinfo)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
@@ -87,7 +84,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				musicController.UpdateMusic(rs.Store, musicValue)
+				BH.musicRepository.UpdateMusic(&musicValue)
 				w.Write([]byte("Successful update music infomation"))
 			}))
 
@@ -98,7 +95,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 					http.Error(w, "Invalid music ID in context", http.StatusInternalServerError)
 					return
 				}
-				musicController.DeleteMusic(rs.Store, musicID)
+				BH.musicRepository.DeleteMusic(musicID)
 				w.Write([]byte("Successful delete music infomation"))
 			}))
 
@@ -123,7 +120,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 						http.Error(w, err.Error(), http.StatusBadRequest)
 						return
 					}
-					musicController.UpdateMusicInfo(rs.Store, musicInfo)
+					BH.musicRepository.UpdateMusicInfo(&musicInfo)
 					w.Write([]byte("Successful update music info infomation"))
 				}))
 
@@ -134,7 +131,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 						http.Error(w, "Invalid music info ID in context", http.StatusInternalServerError)
 						return
 					}
-					musicController.DeleteMusicInfo(rs.Store, musicInfoID)
+					BH.musicRepository.DeleteMusicInfo(musicInfoID)
 					w.Write([]byte("Successful delete music info infomation"))
 				}))
 			})
@@ -161,7 +158,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 				http.Error(w, "Invalid music ID in context", http.StatusInternalServerError)
 				return
 			}
-			musics, err := musicController.GetMusicsByID(rs.Store, musicID)
+			musics, err := BH.musicRepository.GetMusicsByID(musicID)
 			if err != nil {
 				http.Error(w, "Error fetching music", http.StatusInternalServerError)
 				return
@@ -181,7 +178,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 				http.Error(w, "Invalid music ID in context", http.StatusInternalServerError)
 				return
 			}
-			musics, err := musicController.GetMusicInfoByMusicID(rs.Store, musicID)
+			musics, err := BH.musicRepository.GetMusicInfoByMusicID(musicID)
 			if err != nil {
 				http.Error(w, "Error fetching music info", http.StatusInternalServerError)
 				return
@@ -197,7 +194,7 @@ func musicRouter(rs *models.AppResource) http.Handler {
 
 	})
 	r.Get("/all", func(w http.ResponseWriter, r *http.Request) {
-		musics, err := musicController.GetMusics(rs.Store)
+		musics, err := BH.musicRepository.GetMusics()
 		if err != nil {
 			http.Error(w, "Error fetching music", http.StatusInternalServerError)
 			return
