@@ -35,19 +35,7 @@ func (BH BaseHandler) postRouter() http.Handler {
 		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
 		r.Route("/upload", func(r chi.Router) {
-			r.Use(func(h http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// check role
-					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["userid"].(int)
-					role := BH.userRepositor.RoleCheck(userID)
-					if role != "admin" {
-						http.Error(w, "Forbidden", http.StatusForbidden)
-						return
-					}
-					h.ServeHTTP(w, r)
-				})
-			})
+			r.Use(BH.AdminAuthenticate)
 
 			r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				var post models.Posts
@@ -98,46 +86,48 @@ func (BH BaseHandler) postRouter() http.Handler {
 				w.Header().Set("Content-Type", "application/json")
 				w.Write(response)
 			})
+			r.Group(func(r chi.Router) {
+				r.Use(BH.AdminAuthenticate)
+				r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					//check role
+					_, claims, _ := jwtauth.FromContext(r.Context())
+					userID := claims["userid"].(int)
+					role := BH.userRepositor.RoleCheck(userID)
+					if role != "admin" {
+						http.Error(w, "Forbidden", http.StatusForbidden)
+						return
+					}
 
-			r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//check role
-				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["userid"].(int)
-				role := BH.userRepositor.RoleCheck(userID)
-				if role != "admin" {
-					http.Error(w, "Forbidden", http.StatusForbidden)
-					return
-				}
+					var postValue models.Posts
+					err := json.NewDecoder(r.Body).Decode(&postValue)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					BH.postRepository.UpdatePost(&postValue)
+					w.Write([]byte("Successful update post"))
+				}))
 
-				var postValue models.Posts
-				err := json.NewDecoder(r.Body).Decode(&postValue)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-				BH.postRepository.UpdatePost(&postValue)
-				w.Write([]byte("Successful update post"))
-			}))
+				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					//check role
+					_, claims, _ := jwtauth.FromContext(r.Context())
+					userID := claims["userid"].(int)
+					role := BH.userRepositor.RoleCheck(userID)
+					if role != "admin" {
+						http.Error(w, "Forbidden", http.StatusForbidden)
+						return
+					}
 
-			r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//check role
-				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["userid"].(int)
-				role := BH.userRepositor.RoleCheck(userID)
-				if role != "admin" {
-					http.Error(w, "Forbidden", http.StatusForbidden)
-					return
-				}
-
-				ctx := r.Context()
-				postID, ok := ctx.Value("postID").(int)
-				if !ok {
-					http.Error(w, "Invalid post ID in context", http.StatusInternalServerError)
-					return
-				}
-				BH.postRepository.DeletePost(postID)
-				w.Write([]byte("Successful delete post"))
-			}))
+					ctx := r.Context()
+					postID, ok := ctx.Value("postID").(int)
+					if !ok {
+						http.Error(w, "Invalid post ID in context", http.StatusInternalServerError)
+						return
+					}
+					BH.postRepository.DeletePost(postID)
+					w.Write([]byte("Successful delete post"))
+				}))
+			})
 		})
 	})
 

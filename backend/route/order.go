@@ -52,46 +52,31 @@ func (BH BaseHandler) orderRouter() http.Handler {
 				w.Header().Set("Content-Type", "application/json")
 				w.Write(response)
 			})
+			r.Group(func(r chi.Router) {
+				r.Use(BH.AdminAuthenticate)
 
-			r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//check role
-				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["userid"].(int)
-				role := BH.userRepositor.RoleCheck(userID)
-				if role != "admin" {
-					http.Error(w, "Forbidden", http.StatusForbidden)
-					return
-				}
+				r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					var orderValue models.Orders
+					err := json.NewDecoder(r.Body).Decode(&orderValue)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					BH.orderRepository.UpdateOrder(&orderValue)
+					w.Write([]byte("Successful update order"))
+				}))
 
-				var orderValue models.Orders
-				err := json.NewDecoder(r.Body).Decode(&orderValue)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-				BH.orderRepository.UpdateOrder(&orderValue)
-				w.Write([]byte("Successful update order"))
-			}))
-
-			r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//check role
-				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["userid"].(int)
-				role := BH.userRepositor.RoleCheck(userID)
-				if role != "admin" {
-					http.Error(w, "Forbidden", http.StatusForbidden)
-					return
-				}
-
-				ctx := r.Context()
-				orderID, ok := ctx.Value("orderID").(int)
-				if !ok {
-					http.Error(w, "Invalid order ID in context", http.StatusInternalServerError)
-					return
-				}
-				BH.orderRepository.DeleteOrder(orderID)
-				w.Write([]byte("Successful delete order"))
-			}))
+				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					ctx := r.Context()
+					orderID, ok := ctx.Value("orderID").(int)
+					if !ok {
+						http.Error(w, "Invalid order ID in context", http.StatusInternalServerError)
+						return
+					}
+					BH.orderRepository.DeleteOrder(orderID)
+					w.Write([]byte("Successful delete order"))
+				}))
+			})
 		})
 	})
 

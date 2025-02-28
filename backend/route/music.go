@@ -50,18 +50,7 @@ func (BH BaseHandler) musicRouter() http.Handler {
 		})
 
 		r.Route("/admin/{musicID}", func(r chi.Router) {
-			r.Use(func(h http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					musicID, err := strconv.Atoi(chi.URLParam(r, "musicID"))
-					if err != nil {
-						http.Error(w, "Invalid music ID", http.StatusBadRequest)
-						return
-					}
-					type contextKey string
-					ctx := context.WithValue(r.Context(), contextKey("musicID"), musicID)
-					h.ServeHTTP(w, r.WithContext(ctx))
-				})
-			})
+			r.Use(BH.AdminAuthenticate)
 
 			r.Post("/upload/info", func(w http.ResponseWriter, r *http.Request) {
 				var musicinfo models.MusicInfo

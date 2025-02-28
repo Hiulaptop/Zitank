@@ -76,21 +76,7 @@ func (BH BaseHandler) roomRouter() http.Handler {
 		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
 		r.Route("/upload", func(r chi.Router) {
-			r.Use(func(h http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					ctx := r.Context()
-					//check role
-					_, claims, _ := jwtauth.FromContext(ctx)
-					userID := int(math.Round(claims["userid"].(float64)))
-					role := BH.userRepositor.RoleCheck(userID)
-					if role != "admin" {
-						http.Error(w, "Forbidden", http.StatusForbidden)
-						return
-					}
-					ctx = context.WithValue(ctx, "userid", userID)
-					h.ServeHTTP(w, r.WithContext(ctx))
-				})
-			})
+			r.Use(BH.AdminAuthenticate)
 
 			r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.Context()
@@ -193,46 +179,48 @@ func (BH BaseHandler) roomRouter() http.Handler {
 				w.Header().Set("Content-Type", "application/json")
 				w.Write(response)
 			})
+			r.Group(func(r chi.Router) {
+				r.Use(BH.AdminAuthenticate)
+				r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					//check role
+					_, claims, _ := jwtauth.FromContext(r.Context())
+					userID := claims["userid"].(int)
+					role := BH.userRepositor.RoleCheck(userID)
+					if role != "admin" {
+						http.Error(w, "Forbidden", http.StatusForbidden)
+						return
+					}
 
-			r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//check role
-				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["userid"].(int)
-				role := BH.userRepositor.RoleCheck(userID)
-				if role != "admin" {
-					http.Error(w, "Forbidden", http.StatusForbidden)
-					return
-				}
+					var roomValue models.Rooms
+					err := json.NewDecoder(r.Body).Decode(&roomValue)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					BH.roomRepository.UpdateRoom(&roomValue)
+					w.Write([]byte("Successful update room"))
+				}))
 
-				var roomValue models.Rooms
-				err := json.NewDecoder(r.Body).Decode(&roomValue)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-				BH.roomRepository.UpdateRoom(&roomValue)
-				w.Write([]byte("Successful update room"))
-			}))
+				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					//check role
+					_, claims, _ := jwtauth.FromContext(r.Context())
+					userID := claims["userid"].(int)
+					role := BH.userRepositor.RoleCheck(userID)
+					if role != "admin" {
+						http.Error(w, "Forbidden", http.StatusForbidden)
+						return
+					}
 
-			r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				//check role
-				_, claims, _ := jwtauth.FromContext(r.Context())
-				userID := claims["userid"].(int)
-				role := BH.userRepositor.RoleCheck(userID)
-				if role != "admin" {
-					http.Error(w, "Forbidden", http.StatusForbidden)
-					return
-				}
-
-				ctx := r.Context()
-				roomID, ok := ctx.Value("roomID").(int)
-				if !ok {
-					http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
-					return
-				}
-				BH.roomRepository.DeleteRoom(roomID)
-				w.Write([]byte("Successful delete room"))
-			}))
+					ctx := r.Context()
+					roomID, ok := ctx.Value("roomID").(int)
+					if !ok {
+						http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
+						return
+					}
+					BH.roomRepository.DeleteRoom(roomID)
+					w.Write([]byte("Successful delete room"))
+				}))
+			})
 
 			r.Post("/getfreetime", func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.Context()
