@@ -14,6 +14,7 @@ export async function loginAction(formData: FormData) {
     body: JSON.stringify({ username, password }),
   });
 
+  localStorage.setItem("jwt", response.headers.get("Authorization")!); 
   if (!response.ok) {
     redirect("/error");
   }

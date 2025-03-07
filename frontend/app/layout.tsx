@@ -3,11 +3,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Logo from "../public/logo/NgayNenKim_logo full-white.png"
-import FooterImg from "../public/logo/NgayNenKim_logo white.png"
+import Logo from "../public/logo/logo.svg";
+import FooterImg from "../public/logo/logo2.svg";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,25 +31,57 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
 
+  const navValues = [
+    { name: "home", value: "Trang chủ", src: "/" },
+    { name: "post", value: "Bài viết", src: "/post" },
+    { name: "rooms", value: "Đặt phòng", src: "/rooms" },
+    { name: "musics", value: "Nhạc", src: "/musics" },
+  ];
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
   const [navItems, setNavItems] = useState("home");
 
+  const link = usePathname();
+  const isLinkActive = (href: any) => {
+    if (href === "/") {
+      return link === href;
+    }
+    return link?.startsWith(href);
+  }
+
+  useEffect(() => {
+    const token = localStorage.getItem("jwt");
+    if (token) {
+      setIsLogin(true);
+    }
+  }, []);
+
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <header className="fixed flex flex-row items-center justify-between top-0 h-24 w-full md:px-[20%] py-1 bg-black text-white">
+        <header className="fixed flex flex-row items-center justify-between top-0 h-24 w-full md:px-[20%] bg-black text-white z-10">
           <Link href="/" className="w-auto h-full">
             <Image src={Logo} alt="logo" className="w-auto h-full" />
           </Link>
-          <nav className="hidden md:visible md:flex flex-row gap-4">
-            <Link href="/post">Post</Link>
-            <Link href="/rooms">Room</Link>
-            {/* <Link href="/musics">Music</Link> */}
-            <Link href="/user">Profile</Link>
+
+          <nav className="hidden h-full md:visible md:grid grid-cols-4 gap-1 text-lg font-bold">
+            {navValues.map((navValue) => (
+              <Link key={navValue.name} href={navValue.src} className={`place-content-center text-center ${isLinkActive(navValue.src)
+                      ? "text-blue-600"
+                      : "text-white"}`}>	
+                {navValue.value}
+              </Link>
+            ))}
+          </nav>
+
+
+          <div className="hidden md:flex flex-row gap-4">
             <Link href="/login">Login</Link>
             <Link href="/signup">Signup</Link>
-          </nav>
+            <Link href="/profile">Profile</Link>
+            <Link href="/logout">Logout</Link>
+          </div>
 
           <div className="md:hidden px-4 relative">
             <button className="flex items-center justify-center w-10 h-10  focus:outline-none" onClick={() => setMenuOpen(!menuOpen)}>
@@ -62,12 +95,12 @@ export default function RootLayout({
               (
                 <div className="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-white ring-1 shadow-lg ring-black/5 focus:outline-none">
                   <nav className="" role="none">
-                    <Link href="/post" className="block px-4 py-2 text-sm hover:bg-slate-200 text-black">Post</Link>
-                    <Link href="/rooms" className="block px-4 py-2 text-sm hover:bg-slate-200 text-black">Room</Link>
-                    {/* <Link href="/musics" className="block px-4 py-2 text-sm hover:bg-slate-200 text-black">Music</Link> */}
-                    <Link href="/user" className="block px-4 py-2 text-sm hover:bg-slate-200 text-black">Profile</Link>
-                    <Link href="/login" className="block px-4 py-2 text-sm hover:bg-slate-200 text-black">Login</Link>
-                    <Link href="/signup" className="block px-4 py-2 text-sm hover:bg-slate-200 text-black">Signup</Link>
+                    {navValues.map((navValue) => (
+                      <Link key={navValue.name} href={navValue.src} className={`block px-4 py-2 text-sm hover:bg-slate-200 text-black ${isLinkActive(navValue.src)
+                          ? "text-blue-600"
+                          : "text-black"}`}>{navValue.value}
+                        </Link>
+                    ))};
                   </nav>
                 </div>
               )
@@ -121,13 +154,14 @@ export default function RootLayout({
           {/* Copyright */}
           <div className="w-full h-12 max-h-32 text-center content-end mt-full">
             Copyright &copy; WEBSITE URL | Design & Development by
-            <Link href="https://github.com/Hiulaptop">
+            &nbsp;
+            <Link href="https://github.com/Hiulaptop" className="hover:text-blue-600">
               Trung Hieu
             </Link>
-            {/* &nbsp; */}
+            &nbsp;
             and
-            {/* &nbsp; */}
-            <Link href="https://github.com/NgTHung">
+            &nbsp;
+            <Link href="https://github.com/NgTHung" className="hover:text-blue-600">
               Tuan Hung
             </Link>
           </div>

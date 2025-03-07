@@ -88,7 +88,7 @@
 
 // startServer();
 
-
+// server.js
 const { createServer } = require("http");
 const { parse } = require("url");
 const next = require("next");
@@ -107,21 +107,19 @@ async function startServer() {
       handle(req, res, parsedUrl);
     });
 
-    const io = new Server(server, {
-      cors: { origin: "*" }, // Cho phép kết nối từ localhost:3000
-    });
+    const io = new Server(server);
 
     io.on("connection", (socket) => {
-      console.log("Client connected:", socket.id);
+      console.log("New client connected:", socket.id);
 
       socket.on("joinRoom", (roomId) => {
         socket.join(roomId);
-        console.log(`Client ${socket.id} joined room ${roomId}`);
+        console.log(`Client ${socket.id} joined room: ${roomId}`);
       });
 
-      socket.on("message", ({ roomId, message }) => {
-        console.log(`Message in room ${roomId}: ${message}`);
-        io.to(roomId).emit("message", message);
+      socket.on("order", ({ roomId, data }) => {
+        console.log(`Order in room ${roomId}:`, data);
+        io.to(roomId).emit("message", data); // Gửi dữ liệu đến tất cả client trong room
       });
 
       socket.on("disconnect", () => {
@@ -132,8 +130,8 @@ async function startServer() {
     server.listen(port, () => {
       console.log(`> Server running on http://localhost:${port}`);
     });
-  } catch (error) {
-    console.error("Server error:", error);
+  } catch (err) {
+    console.error("Failed to start server:", err);
     process.exit(1);
   }
 }
