@@ -30,8 +30,8 @@ type MusicRepository interface {
 	GetMusicsByID(int) (*Musics, error)
 	GetMusicInfoByMusicID(int) ([]*MusicInfo, error)
 
-	CreateMusic(*Musics) error
-	CreateMusicInfo(*MusicInfo) error
+	CreateMusic(*Musics) (int, error)
+	CreateMusicInfo(*MusicInfo) (int, error)
 
 	UpdateMusic(*Musics) error
 	UpdateMusicInfo(*MusicInfo) error

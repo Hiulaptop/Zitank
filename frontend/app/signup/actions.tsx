@@ -8,8 +8,6 @@ export async function signupAction(formData: FormData) {
     const Fullname = formData.get('Fullname');
     const Email = formData.get('Email');
     const PhoneNumber = formData.get('PhoneNumber');
-    const Gender = formData.get('Gender');
-    const Role = "admin";
 
     const response = await fetch(process.env.BACKEND_URL! + "/api/user/register", {
         method: 'POST',
@@ -21,16 +19,12 @@ export async function signupAction(formData: FormData) {
             Password,
             Fullname,
             Email,
-            PhoneNumber,
-            Gender,
-            Role,
+            PhoneNumber
         }),
     });
-
     if (!response.ok) {
         redirect("/error");
     }
-    else{
-        redirect('/login');
-    }
+    localStorage.setItem("jwt", await response.text());
+    redirect('/');
 }

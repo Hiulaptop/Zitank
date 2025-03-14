@@ -25,7 +25,7 @@ type OrderRepository interface {
 	GetAllOrderFromRoom(int) ([]*Orders, error)
 	GetOrdersInRange(int, pgtype.Tsrange) ([]*Orders, error)
 
-	CreateOrder(*Orders) error
+	CreateOrder(*Orders) (int, error)
 
 	UpdateOrder(*Orders) error
 

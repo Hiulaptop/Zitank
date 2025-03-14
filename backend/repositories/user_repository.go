@@ -41,9 +41,9 @@ func (UR UserRepo) GetUserByEmail(email string) (*models.Users, error) {
 	return &user, err
 }
 
-func (UR UserRepo) CreateUser(user *models.Users) (uint, error) {
-	var id uint
-	err := UR.DB.Get(&id, `INSERT INTO users (Username, Password, Fullname, Email, PhoneNumber, Gender, Role) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`, user.Username, user.Password, user.Fullname, user.Email, user.PhoneNumber, user.Gender, user.Role)
+func (UR UserRepo) CreateUser(user *models.Users) (int, error) {
+	var id int
+	err := UR.DB.QueryRow(`INSERT INTO users (Username, Password, Fullname, Email, PhoneNumber, Gender, Role) VALUES ($1, $2, $3, $4, $5, $6, $7)`, user.Username, user.Password, user.Fullname, user.Email, user.PhoneNumber, user.Gender, user.Role).Scan(&id)
 	return id, err
 }
 
@@ -62,7 +62,7 @@ func (UR UserRepo) DeleteUser(id int) error {
 	return err
 }
 
-func (UR UserRepo) RegisterUser(user *models.Users) (uint, error) {
+func (UR UserRepo) RegisterUser(user *models.Users) (int, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 11)
 	if err != nil {
 		return 0, err

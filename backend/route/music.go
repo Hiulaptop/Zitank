@@ -41,11 +41,15 @@ func (BH BaseHandler) musicRouter() http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = BH.musicRepository.CreateMusic(&music)
+				id, err := BH.musicRepository.CreateMusic(&music)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+					"id":     id,
+				})
 			})
 		})
 
@@ -59,11 +63,15 @@ func (BH BaseHandler) musicRouter() http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = BH.musicRepository.CreateMusicInfo(&musicinfo)
+				id, err := BH.musicRepository.CreateMusicInfo(&musicinfo)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+					"id":     id,
+				})
 			})
 
 			r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +82,9 @@ func (BH BaseHandler) musicRouter() http.Handler {
 					return
 				}
 				BH.musicRepository.UpdateMusic(&musicValue)
-				w.Write([]byte("Successful update music infomation"))
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+				})
 			}))
 
 			r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -85,7 +95,9 @@ func (BH BaseHandler) musicRouter() http.Handler {
 					return
 				}
 				BH.musicRepository.DeleteMusic(musicID)
-				w.Write([]byte("Successful delete music infomation"))
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+				})
 			}))
 
 			r.Route("/{musicInfoID}", func(r chi.Router) {
@@ -110,7 +122,9 @@ func (BH BaseHandler) musicRouter() http.Handler {
 						return
 					}
 					BH.musicRepository.UpdateMusicInfo(&musicInfo)
-					w.Write([]byte("Successful update music info infomation"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 
 				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +135,9 @@ func (BH BaseHandler) musicRouter() http.Handler {
 						return
 					}
 					BH.musicRepository.DeleteMusicInfo(musicInfoID)
-					w.Write([]byte("Successful delete music info infomation"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 			})
 
@@ -158,7 +174,10 @@ func (BH BaseHandler) musicRouter() http.Handler {
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(response)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status": "success",
+				"music":  response,
+			})
 		})
 		r.Get("/info", func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -178,7 +197,10 @@ func (BH BaseHandler) musicRouter() http.Handler {
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(response)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":     "success",
+				"music_info": response,
+			})
 		})
 
 	})
@@ -194,7 +216,10 @@ func (BH BaseHandler) musicRouter() http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(res)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"musics": res,
+		})
 	})
 	return r
 }

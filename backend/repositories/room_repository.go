@@ -28,9 +28,10 @@ func (RR RoomRepo) GetRoom(id int) (*models.Rooms, error) {
 	return room, err
 }
 
-func (RR RoomRepo) CreateRoom(room *models.RoomObject, userID int) error {
-	_, err := RR.DB.Exec(`INSERT INTO rooms (name, address, description, price, userid) VALUES ($1, $2, $3, $4, $5)`, room.Name, room.Address, room.Description, room.Price, userID)
-	return err
+func (RR RoomRepo) CreateRoom(room *models.RoomObject, userID int) (int, error) {
+	var id int
+	err := RR.DB.QueryRow(`INSERT INTO rooms (name, address, description, price, userid) VALUES ($1, $2, $3, $4, $5) returning id;`, room.Name, room.Address, room.Description, room.Price, userID).Scan(&id)
+	return id, err
 }
 
 func (RR RoomRepo) UpdateRoom(room *models.Rooms) error {

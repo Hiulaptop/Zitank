@@ -27,7 +27,10 @@ func (BH BaseHandler) postRouter() http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(response)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"posts":  response,
+		})
 	})
 
 	r.Group(func(r chi.Router) {
@@ -44,11 +47,15 @@ func (BH BaseHandler) postRouter() http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = BH.postRepository.CreatePost(&post)
+				id, err := BH.postRepository.CreatePost(&post)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+					"id":     id,
+				})
 			})
 		})
 
@@ -84,20 +91,14 @@ func (BH BaseHandler) postRouter() http.Handler {
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				w.Write(response)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+					"post":   response,
+				})
 			})
 			r.Group(func(r chi.Router) {
 				r.Use(BH.AdminAuthenticate)
 				r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					//check role
-					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["userid"].(int)
-					role := BH.userRepositor.RoleCheck(userID)
-					if role != "admin" {
-						http.Error(w, "Forbidden", http.StatusForbidden)
-						return
-					}
-
 					var postValue models.Posts
 					err := json.NewDecoder(r.Body).Decode(&postValue)
 					if err != nil {
@@ -105,18 +106,12 @@ func (BH BaseHandler) postRouter() http.Handler {
 						return
 					}
 					BH.postRepository.UpdatePost(&postValue)
-					w.Write([]byte("Successful update post"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 
 				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					//check role
-					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["userid"].(int)
-					role := BH.userRepositor.RoleCheck(userID)
-					if role != "admin" {
-						http.Error(w, "Forbidden", http.StatusForbidden)
-						return
-					}
 
 					ctx := r.Context()
 					postID, ok := ctx.Value("postID").(int)
@@ -125,7 +120,9 @@ func (BH BaseHandler) postRouter() http.Handler {
 						return
 					}
 					BH.postRepository.DeletePost(postID)
-					w.Write([]byte("Successful delete post"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 			})
 		})

@@ -40,9 +40,10 @@ func (AR *AlbumRepo) GetAlbumsByAuthorName(authorname string) ([]*models.Albums,
 	return album, err
 }
 
-func (AR *AlbumRepo) CreateAlbum(album *models.Albums) error {
-	_, err := AR.DB.Exec(`INSERT INTO albums (Name, AuthorName, ReleaseDate, Type, Description, Link, UserID) VALUES ($1, $2, $3, $4, $5, $6, $7)`, album.Name, album.AuthorName, album.ReleaseDate, album.Type, album.Description, album.Link, album.UserID)
-	return err
+func (AR *AlbumRepo) CreateAlbum(album *models.Albums) (int, error) {
+	var id int
+	err := AR.DB.QueryRow(`INSERT INTO albums (Name, AuthorName, ReleaseDate, Type, Description, Link, UserID) VALUES ($1, $2, $3, $4, $5, $6, $7) returning id;`, album.Name, album.AuthorName, album.ReleaseDate, album.Type, album.Description, album.Link, album.UserID).Scan(&id)
+	return id, err
 }
 
 func (AR *AlbumRepo) UpdateAlbum(album *models.Albums) error {

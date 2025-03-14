@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -59,6 +60,7 @@ func (BH BaseHandler) roomRouter() http.Handler {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		rooms, err := BH.roomRepository.GetRooms()
 		if err != nil {
+			log.Println(err)
 			http.Error(w, "Error fetching room", http.StatusInternalServerError)
 			return
 		}
@@ -68,7 +70,10 @@ func (BH BaseHandler) roomRouter() http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(response)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"rooms":  response,
+		})
 	})
 
 	r.Group(func(r chi.Router) {
@@ -91,11 +96,15 @@ func (BH BaseHandler) roomRouter() http.Handler {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = BH.roomRepository.CreateRoom(&room, userID)
+				id, err := BH.roomRepository.CreateRoom(&room, userID)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+					"id":     id,
+				})
 			})
 		})
 
@@ -138,24 +147,32 @@ func (BH BaseHandler) roomRouter() http.Handler {
 				OB.UserID = uint(userID)
 				OB.RoomID = uint(roomID)
 				order, err := fromOrderBody(OB)
-				//Fix me
-				//Fix me
-				//Fix me
-				//Fix me
-				//Fix me
-				//Fix me
-				//Fix me
-				order.TotalPrice = 12.3
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
-				err = BH.orderRepository.CreateOrder(&order)
+
+				var OT OrderTime
+				Time := OT.To.Sub(OT.From).Minutes()
+
+				room, err := BH.roomRepository.GetRoom(roomID)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
+				order.TotalPrice = room.Price * Time
+
+				
+				id, err := BH.orderRepository.CreateOrder(&order)
 				if err != nil {
 					fmt.Println(err)
 					http.Error(w, err.Error(), http.StatusBadRequest)
 					return
 				}
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+					"id":     id,
+				})
 			})
 
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +194,10 @@ func (BH BaseHandler) roomRouter() http.Handler {
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				w.Write(response)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status": "success",
+					"room":   response,
+				})
 			})
 			r.Group(func(r chi.Router) {
 				r.Use(BH.AdminAuthenticate)
@@ -198,7 +218,9 @@ func (BH BaseHandler) roomRouter() http.Handler {
 						return
 					}
 					BH.roomRepository.UpdateRoom(&roomValue)
-					w.Write([]byte("Successful update room"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 
 				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -218,7 +240,9 @@ func (BH BaseHandler) roomRouter() http.Handler {
 						return
 					}
 					BH.roomRepository.DeleteRoom(roomID)
-					w.Write([]byte("Successful delete room"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 			})
 
@@ -255,7 +279,10 @@ func (BH BaseHandler) roomRouter() http.Handler {
 					OT.Status = "In process"
 					fr.FromTo = append(fr.FromTo, OT)
 				}
-				json.NewEncoder(w).Encode(fr)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status":    "success",
+					"free_time": fr,
+				})
 			})
 		})
 	})

@@ -23,7 +23,7 @@ type AlbumRepository interface {
 	GetAlbumsByName(string) ([]*Albums, error)
 	GetAlbumsByAuthorName(string) ([]*Albums, error)
 
-	CreateAlbum(*Albums) error
+	CreateAlbum(*Albums) (int, error)
 
 	UpdateAlbum(*Albums) error
 

@@ -18,7 +18,7 @@ type PostRepository interface {
 	GetPost(int) (*Posts, error)
 	GetAllPostByUser(int) ([]*Posts, error)
 
-	CreatePost(*Posts) error
+	CreatePost(*Posts) (int, error)
 
 	UpdatePost(*Posts) error
 

@@ -28,7 +28,7 @@ type RoomRepository interface {
 	GetRooms() ([]*Rooms, error)
 	GetRoom(int) (*Rooms, error)
 
-	CreateRoom(*RoomObject, int) error
+	CreateRoom(*RoomObject, int) (int, error)
 
 	UpdateRoom(*Rooms) error
 

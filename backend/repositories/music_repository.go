@@ -39,14 +39,16 @@ func (MR MusicRepo) GetMusicInfoByMusicID(id int) ([]*models.MusicInfo, error) {
 	return musicinfo, err
 }
 
-func (MR MusicRepo) CreateMusic(music *models.Musics) error {
-	_, err := MR.DB.Exec(`INSERT INTO musics (name, type, link, albumid) VALUES ($1, $2, $3, $4)`, music.Name, music.Type, music.Link, music.AlbumID)
-	return err
+func (MR MusicRepo) CreateMusic(music *models.Musics) (int, error) {
+	var id int
+	err := MR.DB.QueryRow(`INSERT INTO musics (name, type, link, albumid) VALUES ($1, $2, $3, $4) returning id;`, music.Name, music.Type, music.Link, music.AlbumID).Scan(&id)
+	return id, err
 }
 
-func (MR MusicRepo) CreateMusicInfo(musicinfo *models.MusicInfo) error {
-	_, err := MR.DB.Exec(`INSERT INTO musicinfo (artistname, role, type, musicid) VALUES ($1, $2, $3, $4)`, musicinfo.ArtistName, musicinfo.Role, musicinfo.Type, musicinfo.MusicID)
-	return err
+func (MR MusicRepo) CreateMusicInfo(musicinfo *models.MusicInfo) (int, error) {
+	var id int
+	err := MR.DB.QueryRow(`INSERT INTO musicinfo (artistname, role, type, musicid) VALUES ($1, $2, $3, $4) returning id;`, musicinfo.ArtistName, musicinfo.Role, musicinfo.Type, musicinfo.MusicID).Scan(&id)
+	return id, err
 }
 
 func (MR MusicRepo) UpdateMusic(music *models.Musics) error {

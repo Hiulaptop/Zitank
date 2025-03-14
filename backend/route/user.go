@@ -43,6 +43,7 @@ func FromUserRegister(ur UserRegister) models.Users {
 
 func (BH BaseHandler) userRouter() http.Handler {
 	r := chi.NewRouter()
+	// Tai sao lai co cai nay
 	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 		users, err := BH.userRepositor.GetUsers()
 		if err != nil {
@@ -54,7 +55,10 @@ func (BH BaseHandler) userRouter() http.Handler {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		w.Write(res)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"users":  res,
+		})
 	})
 	r.Group(func(r chi.Router) {
 		r.Use(jwtauth.Verifier(BH.TokenAuth))
@@ -81,7 +85,10 @@ func (BH BaseHandler) userRouter() http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write([]byte(tokenString))
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"token":  tokenString,
+		})
 	})
 
 	r.Post("/register", func(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +114,10 @@ func (BH BaseHandler) userRouter() http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write([]byte(tokenString))
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"token":  tokenString,
+		})
 	})
 
 	r.Post("/forgot-password", func(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +141,10 @@ func (BH BaseHandler) userRouter() http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write([]byte(tokenString))
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"token":  tokenString,
+		})
 	})
 	return r
 }

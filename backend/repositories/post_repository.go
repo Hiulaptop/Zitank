@@ -18,7 +18,7 @@ func NewPostRepo(PR *sqlx.DB) *PostRepo {
 
 func (PR PostRepo) GetPosts() ([]*models.Posts, error) {
 	var posts []*models.Posts
-	err := PR.DB.Select(&posts, `SELECT * FROM posts`)
+	err := PR.DB.Select(&posts, `SELECT * FROM posts WHERE CreateDate >= now()`)
 	return posts, err
 }
 
@@ -34,9 +34,10 @@ func (PR PostRepo) GetAllPostByUser(uid int) ([]*models.Posts, error) {
 	return posts, err
 }
 
-func (PR PostRepo) CreatePost(post *models.Posts) error {
-	_, err := PR.DB.Exec(`INSERT INTO posts (title, content, userid) VALUES ($1, $2, $3)`, post.Title, post.Content, post.UserID)
-	return err
+func (PR PostRepo) CreatePost(post *models.Posts) (int, error) {
+	var id int
+	err := PR.DB.QueryRow(`INSERT INTO posts (title, content, userid) VALUES ($1, $2, $3) returning id;`, post.Title, post.Content, post.UserID).Scan(&id)
+	return id, err
 }
 
 func (PR PostRepo) UpdatePost(post *models.Posts) error {

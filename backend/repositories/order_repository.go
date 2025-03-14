@@ -35,9 +35,10 @@ func (OR OrderRepo) GetOrder(id int) (*models.Orders, error) {
 	return order, err
 }
 
-func (OR OrderRepo) CreateOrder(order *models.Orders) error {
-	_, err := OR.DB.Exec(`INSERT INTO orders (userid, roomid, checkindate, checkoutdate, totalprice, state, fromto, note) VALUES ($1, $2, now(), now(), $3, $4, $5, $6)`, order.UserID, order.RoomID, order.TotalPrice, order.State, order.FromTo, order.Note)
-	return err
+func (OR OrderRepo) CreateOrder(order *models.Orders) (int, error) {
+	var id int
+	err := OR.DB.QueryRow(`INSERT INTO orders (userid, roomid, checkindate, checkoutdate, totalprice, state, fromto, note) VALUES ($1, $2, now(), now(), $3, $4, $5, $6)  returning id;`, order.UserID, order.RoomID, order.TotalPrice, order.State, order.FromTo, order.Note).Scan(&id)
+	return id, err
 }
 
 func (OR OrderRepo) UpdateOrder(order *models.Orders) error {

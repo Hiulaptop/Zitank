@@ -50,7 +50,10 @@ func (BH BaseHandler) orderRouter() http.Handler {
 					return
 				}
 				w.Header().Set("Content-Type", "application/json")
-				w.Write(response)
+				json.NewEncoder(w).Encode(map[string]any{
+					"status": "success",
+					"order":  response,
+				})
 			})
 			r.Group(func(r chi.Router) {
 				r.Use(BH.AdminAuthenticate)
@@ -63,7 +66,9 @@ func (BH BaseHandler) orderRouter() http.Handler {
 						return
 					}
 					BH.orderRepository.UpdateOrder(&orderValue)
-					w.Write([]byte("Successful update order"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 
 				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +79,9 @@ func (BH BaseHandler) orderRouter() http.Handler {
 						return
 					}
 					BH.orderRepository.DeleteOrder(orderID)
-					w.Write([]byte("Successful delete order"))
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status": "success",
+					})
 				}))
 			})
 		})

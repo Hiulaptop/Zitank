@@ -22,8 +22,8 @@ type UserRepository interface {
 	GetUserByUsername(string) (*Users, error)
 	GetUserByEmail(string) (*Users, error)
 
-	CreateUser(*Users) (uint, error)
-	RegisterUser(*Users) (uint, error)
+	CreateUser(*Users) (int, error)
+	RegisterUser(*Users) (int, error)
 
 	LoginUserByUsername(string, string) (*Users, error)
 
