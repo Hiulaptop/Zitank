@@ -11,7 +11,7 @@ import {
     SELECTION_CHANGE_COMMAND,
     UNDO_COMMAND
 } from "lexical";
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, PartyPopper, Redo, Strikethrough, Underline, Undo } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Italic, PartyPopper, Redo, Save, Strikethrough, Underline, Undo } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { $isListNode, ListNode } from "@lexical/list";
 
@@ -20,6 +20,7 @@ import ColorPlugin from "./ColorPlugin";
 import ListPlugin from "./ListPlugin";
 import ImagePlugin from "./ImagePlugin";
 import YoutubePlugin from "./YoutubePlugin";
+import SavePlugin, { SAVE_COMMAND } from "./SavePlugin";
 
 export default function Toolbars() {
     const [editor] = useLexicalComposerContext();
@@ -43,10 +44,10 @@ export default function Toolbars() {
             const element = anchorNode.getKey() === 'root' ? anchorNode : anchorNode.getTopLevelElementOrThrow();
             const elementKey = element.getKey();
             const elementDom = editor.getElementByKey(elementKey);
-            
+
             if (!elementDom) return;
 
-            if ($isListNode(element)){
+            if ($isListNode(element)) {
                 const parentList = $getNearestNodeOfType(anchorNode, ListNode);
                 const type = parentList ? parentList.getTag() : element.getTag();
                 setBlockType(type);
@@ -164,39 +165,46 @@ export default function Toolbars() {
                 <AlignLeft className={`mx-auto`} />
 
             </button>
-            
+
             <button
                 onClick={() => {
                     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'right');
                 }}
                 className={`w-10 rounded-xl hover:bg-gray-300 `}
             >
-                <AlignRight className={`mx-auto`}/>
+                <AlignRight className={`mx-auto`} />
             </button>
-            
+
             <button
                 onClick={() => {
                     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'center');
                 }}
                 className={`w-10 rounded-xl hover:bg-gray-300 `}
             >
-                <AlignCenter className={`mx-auto`}/>
+                <AlignCenter className={`mx-auto`} />
             </button>
-            
-            
+
+
             <button
                 onClick={() => {
                     editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, 'justify');
                 }}
                 className={`w-10 rounded-xl hover:bg-gray-300 `}
             >
-                <AlignJustify className={`mx-auto`}/>
+                <AlignJustify className={`mx-auto`} />
             </button>
-            
+
+            <button onClick={
+                () => { editor.dispatchCommand(SAVE_COMMAND, undefined) }
+            }>
+                <Save />
+            </button>
+
             <ColorPlugin />
-            <ListPlugin blockType = {blockType} />
+            <ListPlugin blockType={blockType} />
             <ImagePlugin />
             <YoutubePlugin />
+            <SavePlugin />
         </div>
     );
 }

@@ -1,4 +1,5 @@
-import { redirect } from "next/dist/server/api-utils";
+// "use client"
+
 import ExampleImg from "../../public/exampleimg/room_img.jpg"
 import Image from "next/image";
 
@@ -21,7 +22,7 @@ interface Room {
 
 export default async function Rooms() {
   const data = await fetch(process.env.BACKEND_URL! + "/api/room/")
-  const response: Room[] = await data.json()
+  const response: Room[] = JSON.parse(atob((await data.json()).rooms))
   return (
     <div className="container flex flex-col h-full mx-auto gap-8 py-10">
       {response.map((val) =>
@@ -39,7 +40,7 @@ export default async function Rooms() {
             {val.description}
           </div>
           <div className="flex justify-center items-center md:order-none order-last md:h-24 h-12 m-[5px]">
-            <a className="translate duration-300 h-12 w-40 rounded-lg text-lg text-center content-center bg-black text-white hover:text-black hover:bg-white hover:ring-2 hover:ring-black" href="/rooms/test_id">
+            <a className="translate duration-300 h-12 w-40 rounded-lg text-lg text-center content-center bg-black text-white hover:text-black hover:bg-white hover:ring-2 hover:ring-black" href={`/rooms/${val.id}`}>
               Đặt phòng
             </a>
           </div>

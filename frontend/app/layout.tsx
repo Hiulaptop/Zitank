@@ -7,8 +7,9 @@ import Logo from "../public/logo/logo.svg";
 import FooterImg from "../public/logo/logo2.svg";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
+import Cookies from "js-cookie";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,14 +34,26 @@ export default function RootLayout({
 
   const navValues = [
     { name: "home", value: "Trang chủ", src: "/" },
-    { name: "post", value: "Bài viết", src: "/post" },
+    { name: "post", value: "Bài viết", src: "/posts" },
     { name: "rooms", value: "Đặt phòng", src: "/rooms" },
     { name: "musics", value: "Nhạc", src: "/musics" },
+    { name: "aboutus", value: "Về chúng tôi", src: "/aboutus" },
   ];
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
   const [navItems, setNavItems] = useState("home");
+  
+  const loginRef = useRef<HTMLDivElement>(null);
+  const logoutRef = useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    if (loginRef.current) {
+      loginRef.current.style.display = isLogin ? "none" : "flex";
+    }
+    if (logoutRef.current) {
+      logoutRef.current.style.display = isLogin ? "flex" : "none";
+    }
+  }, [isLogin]);
 
   const link = usePathname();
   const isLinkActive = (href: any) => {
@@ -51,21 +64,23 @@ export default function RootLayout({
   }
 
   useEffect(() => {
-    const token = localStorage.getItem("jwt");
-    if (token) {
-      setIsLogin(true);
-    }
-  }, []);
+    // const check = () => {
+      const token = Cookies.get("jwt");
+      setIsLogin(!!token);
+    // }
+
+    // check();
+  }, [link]);
 
   return (
-    <html lang="en">
+    <html lang="vi">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <header className="fixed flex flex-row items-center justify-between top-0 h-24 w-full md:px-[20%] bg-black text-white z-10">
           <Link href="/" className="w-auto h-full">
             <Image src={Logo} alt="logo" className="w-auto h-full" />
           </Link>
 
-          <nav className="hidden h-full md:visible md:grid grid-cols-4 gap-1 text-lg font-bold">
+          <nav className="hidden h-full md:visible md:grid grid-cols-5 gap-1 text-lg font-bold">
             {navValues.map((navValue) => (
               <Link key={navValue.name} href={navValue.src} className={`place-content-center text-center ${isLinkActive(navValue.src)
                       ? "text-blue-600"
@@ -75,12 +90,14 @@ export default function RootLayout({
             ))}
           </nav>
 
-
-          <div className="hidden md:flex flex-row gap-4">
+          <div className="hidden md:flex flex-row gap-4" ref={loginRef}>
             <Link href="/login">Login</Link>
             <Link href="/signup">Signup</Link>
-            <Link href="/profile">Profile</Link>
-            <Link href="/logout">Logout</Link>
+          </div>
+
+          <div className="hidden md:flex flex-row gap-4" ref={logoutRef}>
+            <Link href="/profile" >Profile</Link>
+            <Link href="/logout" >Logout</Link>
           </div>
 
           <div className="md:hidden px-4 relative">
@@ -109,7 +126,7 @@ export default function RootLayout({
         </header>
 
 
-        <main className="mt-24 pt-4 px-4 h-auto min-h-screen">
+        <main className="mt-24 h-auto min-h-screen">
           {children}
         </main>
 

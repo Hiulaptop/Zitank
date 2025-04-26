@@ -18,7 +18,7 @@ func NewPostRepo(PR *sqlx.DB) *PostRepo {
 
 func (PR PostRepo) GetPosts() ([]*models.Posts, error) {
 	var posts []*models.Posts
-	err := PR.DB.Select(&posts, `SELECT * FROM posts WHERE CreateDate >= now()`)
+	err := PR.DB.Select(&posts, `SELECT * FROM posts`)
 	return posts, err
 }
 

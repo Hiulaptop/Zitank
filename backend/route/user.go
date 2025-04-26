@@ -43,29 +43,48 @@ func FromUserRegister(ur UserRegister) models.Users {
 
 func (BH BaseHandler) userRouter() http.Handler {
 	r := chi.NewRouter()
-	// Tai sao lai co cai nay
-	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Use(jwtauth.Verifier(BH.TokenAuth))
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		type GetBody struct {
+			Status string          `json:"status"`
+			Users  []*models.Users `json:"users"`
+		}
+		_, claims, _ := jwtauth.FromContext(r.Context())
+		userID, ok := claims["userid"]
+		if !ok || BH.userRepositor.RoleCheck(int(userID.(float64))) != "admin" {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("401 - Unauthorized"))
+			return
+		}
 		users, err := BH.userRepositor.GetUsers()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadGateway)
 			return
 		}
-		res, err := json.Marshal(users)
+		var body GetBody
+		body.Status = "success"
+		body.Users = users
+		res, err := json.Marshal(body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"users":  res,
-		})
+		w.Write(res)
 	})
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(BH.TokenAuth))
 		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
 			_, claims, _ := jwtauth.FromContext(r.Context())
-			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["userid"])))
+
+			userID, ok := claims["userid"].(int)
+			role := BH.userRepositor.RoleCheck(userID)
+			if !ok || role != "admin" {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte("false"))
+				return
+			}
+
+			w.Write([]byte(role))
 		})
 	})
 	r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +140,7 @@ func (BH BaseHandler) userRouter() http.Handler {
 	})
 
 	r.Post("/forgot-password", func(w http.ResponseWriter, r *http.Request) {
-
+		w.Write([]byte("hihi"))
 	})
 
 	r.Post("/reset-password", func(w http.ResponseWriter, r *http.Request) {

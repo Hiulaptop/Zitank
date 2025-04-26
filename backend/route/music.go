@@ -13,27 +13,38 @@ import (
 
 func (BH BaseHandler) musicRouter() http.Handler {
 	r := chi.NewRouter()
-	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-
-	})
 	r.Group(func(r chi.Router) {
 		r.Use(jwtauth.Verifier(BH.TokenAuth))
 		r.Use(jwtauth.Authenticator(BH.TokenAuth))
-
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			type GetBody struct {
+				Status string           `json:"status"`
+				Musics []*models.Musics `json:"musics"`
+			}
+			_, claims, _ := jwtauth.FromContext(r.Context())
+			userID, ok := claims["userid"]
+			if !ok || BH.userRepositor.RoleCheck(int(userID.(float64))) != "admin" {
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte("401 - Unauthorized"))
+				return
+			}
+			musics, err := BH.musicRepository.GetMusics()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadGateway)
+				return
+			}
+			var body GetBody
+			body.Status = "success"
+			body.Musics = musics
+			res, err := json.Marshal(body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			w.Write(res)
+		})
 		r.Route("/upload", func(r chi.Router) {
-			r.Use(func(h http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// check role
-					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["userid"].(int)
-					role := BH.userRepositor.RoleCheck(userID)
-					if role != "admin" {
-						http.Error(w, "Forbidden", http.StatusForbidden)
-						return
-					}
-					h.ServeHTTP(w, r)
-				})
-			})
+			r.Use(BH.AdminAuthenticate)
 			r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				var music models.Musics
 				err := json.NewDecoder(r.Body).Decode(&music)

@@ -58,29 +58,33 @@ func (BH BaseHandler) roomRouter() http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		type GetBody struct {
+			Status string          `json:"status"`
+			Rooms  []*models.Rooms `json:"rooms"`
+		}
 		rooms, err := BH.roomRepository.GetRooms()
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "Error fetching room", http.StatusInternalServerError)
 			return
 		}
-		response, err := json.Marshal(rooms)
+		var body GetBody
+		body.Status = "success"
+		body.Rooms = rooms
+		response, err := json.Marshal(body)
 		if err != nil {
 			http.Error(w, "Eror marshalling response", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"rooms":  response,
-		})
+		w.Write(response)
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(BH.TokenAuth))
-		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
 		r.Route("/upload", func(r chi.Router) {
+			r.Use(jwtauth.Verifier(BH.TokenAuth))
+			r.Use(jwtauth.Authenticator(BH.TokenAuth))
 			r.Use(BH.AdminAuthenticate)
 
 			r.Post("/", func(w http.ResponseWriter, r *http.Request) {
@@ -118,62 +122,76 @@ func (BH BaseHandler) roomRouter() http.Handler {
 						return
 					}
 					ctx := context.WithValue(r.Context(), "roomID", roomID)
-					_, claims, _ := jwtauth.FromContext(ctx)
-					userID := int(math.Round(claims["userid"].(float64)))
-					ctx = context.WithValue(ctx, "userid", userID)
+					// _, claims, _ := jwtauth.FromContext(ctx)
+					// userID := int(math.Round(claims["userid"].(float64)))
+					// ctx = context.WithValue(ctx, "userid", userID)
 					h.ServeHTTP(w, r.WithContext(ctx))
 				})
 			})
 
-			//need to edit
-			r.Post("/order", func(w http.ResponseWriter, r *http.Request) {
-				ctx := r.Context()
-				roomID, ok := ctx.Value("roomID").(int)
-				if !ok {
-					http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
-					return
-				}
-				userID, ok := ctx.Value("userid").(int)
-				if !ok {
-					http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
-					return
-				}
-				var OB OrderBody
-				err := json.NewDecoder(r.Body).Decode(&OB)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-				OB.UserID = uint(userID)
-				OB.RoomID = uint(roomID)
-				order, err := fromOrderBody(OB)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(BH.TokenAuth))
+				r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
-				var OT OrderTime
-				Time := OT.To.Sub(OT.From).Minutes()
+				r.Use(func(h http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						_, claims, _ := jwtauth.FromContext(r.Context())
+						userID := int(math.Round(claims["userid"].(float64)))
+						ctx := context.WithValue(r.Context(), "userid", userID)
+						h.ServeHTTP(w, r.WithContext(ctx))
+					})
+				})
 
-				room, err := BH.roomRepository.GetRoom(roomID)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-				order.TotalPrice = room.Price * Time
+				r.Post("/order", func(w http.ResponseWriter, r *http.Request) {
+					ctx := r.Context()
+					roomID, ok := ctx.Value("roomID").(int)
+					if !ok {
+						http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
+						return
+					}
+					userID, ok := ctx.Value("userid").(int)
+					if !ok {
+						http.Error(w, "Invalid room ID in context", http.StatusInternalServerError)
+						return
+					}
+					var OB OrderBody
+					err := json.NewDecoder(r.Body).Decode(&OB)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					OB.UserID = uint(userID)
+					OB.RoomID = uint(roomID)
+					order, err := fromOrderBody(OB)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
 
-				
-				id, err := BH.orderRepository.CreateOrder(&order)
-				if err != nil {
-					fmt.Println(err)
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-				json.NewEncoder(w).Encode(map[string]interface{}{
-					"status": "success",
-					"id":     id,
+					Time := order.FromTo.Upper.Time.Sub(order.FromTo.Lower.Time).Minutes()
+
+					room, err := BH.roomRepository.GetRoom(roomID)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+
+					order.TotalPrice = room.Price * Time
+
+					id, err := BH.orderRepository.CreateOrder(&order)
+					if err != nil {
+						fmt.Println(err)
+						http.Error(w, err.Error(), http.StatusBadRequest)
+						return
+					}
+					json.NewEncoder(w).Encode(map[string]interface{}{
+						"status":     "success",
+						"id":         id,
+						"totalprice": order.TotalPrice,
+					})
 				})
 			})
+			//need to edit
 
 			r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				// w.Write([]byte("Hello, World!"))
@@ -200,17 +218,11 @@ func (BH BaseHandler) roomRouter() http.Handler {
 				})
 			})
 			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(BH.TokenAuth))
+				r.Use(jwtauth.Authenticator(BH.TokenAuth))
 				r.Use(BH.AdminAuthenticate)
 				r.Put("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					//check role
-					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["userid"].(int)
-					role := BH.userRepositor.RoleCheck(userID)
-					if role != "admin" {
-						http.Error(w, "Forbidden", http.StatusForbidden)
-						return
-					}
-
 					var roomValue models.Rooms
 					err := json.NewDecoder(r.Body).Decode(&roomValue)
 					if err != nil {
@@ -225,14 +237,6 @@ func (BH BaseHandler) roomRouter() http.Handler {
 
 				r.Delete("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					//check role
-					_, claims, _ := jwtauth.FromContext(r.Context())
-					userID := claims["userid"].(int)
-					role := BH.userRepositor.RoleCheck(userID)
-					if role != "admin" {
-						http.Error(w, "Forbidden", http.StatusForbidden)
-						return
-					}
-
 					ctx := r.Context()
 					roomID, ok := ctx.Value("roomID").(int)
 					if !ok {

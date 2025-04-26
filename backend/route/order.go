@@ -14,8 +14,36 @@ import (
 func (BH BaseHandler) orderRouter() http.Handler {
 	r := chi.NewRouter()
 
+	r.Use(jwtauth.Verifier(BH.TokenAuth))
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		type GetBody struct {
+			Status string           `json:"status"`
+			Orders []*models.Orders `json:"orders"`
+		}
+		_, claims, _ := jwtauth.FromContext(r.Context())
+		userID, ok := claims["userid"]
+		if !ok || BH.userRepositor.RoleCheck(int(userID.(float64))) != "admin" {
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("401 - Unauthorized"))
+			return
+		}
+		orders, err := BH.orderRepository.GetOrders()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		var body GetBody
+		body.Status = "success"
+		body.Orders = orders
+		res, err := json.Marshal(body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Write(res)
+	})
+
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(BH.TokenAuth))
 		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
 		r.Route("/{orderID}", func(r chi.Router) {

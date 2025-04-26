@@ -4,8 +4,10 @@ import (
 	"Zitank/models"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/jwtauth/v5"
@@ -13,28 +15,45 @@ import (
 
 func (BH BaseHandler) postRouter() http.Handler {
 	r := chi.NewRouter()
+	r.Use(jwtauth.Verifier(BH.TokenAuth))
 
 	//get all post
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		type GetPost struct {
+			Status string          `json:"status"`
+			Posts  []*models.Posts `json:"posts"`
+		}
 		posts, err := BH.postRepository.GetPosts()
 		if err != nil {
 			http.Error(w, "Error fetching post", http.StatusInternalServerError)
 			return
 		}
-		response, err := json.Marshal(posts)
+
+		_, claims, _ := jwtauth.FromContext(r.Context())
+		roleCheck := false
+		userID, ok := claims["userid"]
+		if ok {
+			roleCheck = BH.userRepositor.RoleCheck(int(userID.(float64))) == "admin"
+		}
+		fmt.Println(roleCheck)
+
+		var body GetPost
+		for _, data := range posts {
+			if time.Now().After(data.CreateDate.Time) || roleCheck {
+				body.Posts = append(body.Posts, data)
+			}
+		}
+		body.Status = "success"
+		response, err := json.Marshal(body)
 		if err != nil {
 			http.Error(w, "Error marshalling response", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status": "success",
-			"posts":  response,
-		})
+		w.Write(response)
 	})
 
 	r.Group(func(r chi.Router) {
-		r.Use(jwtauth.Verifier(BH.TokenAuth))
 		r.Use(jwtauth.Authenticator(BH.TokenAuth))
 
 		r.Route("/upload", func(r chi.Router) {

@@ -30,9 +30,9 @@ func (OR OrderRepo) GetOrdersInRange(roomID int, fromTo pgtype.Tsrange) ([]*mode
 }
 
 func (OR OrderRepo) GetOrder(id int) (*models.Orders, error) {
-	var order *models.Orders
+	var order models.Orders
 	err := OR.DB.Get(&order, `SELECT * FROM orders WHERE id=$1 LIMIT 1`, id)
-	return order, err
+	return &order, err
 }
 
 func (OR OrderRepo) CreateOrder(order *models.Orders) (int, error) {

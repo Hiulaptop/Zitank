@@ -23,9 +23,9 @@ func (RR RoomRepo) GetRooms() ([]*models.Rooms, error) {
 }
 
 func (RR RoomRepo) GetRoom(id int) (*models.Rooms, error) {
-	var room *models.Rooms
+	var room models.Rooms
 	err := RR.DB.Get(&room, `SELECT * FROM rooms WHERE id=$1 LIMIT 1`, id)
-	return room, err
+	return &room, err
 }
 
 func (RR RoomRepo) CreateRoom(room *models.RoomObject, userID int) (int, error) {
